@@ -15,3 +15,5 @@ Imports:
     dplyr,
     magrittr,
     tidyselect
+URL: https://github.com/icg-cat/plantillesIM
+BugReports: https://github.com/icg-cat/plantillesIM/issues
