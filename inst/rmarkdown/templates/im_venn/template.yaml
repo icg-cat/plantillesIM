@@ -1,0 +1,4 @@
+name: IM_venn
+description: >
+   Plantilla per realitzar diagrames de venn amb diferents aspectes de personalització, que inclou Atkinson i paleta de colors
+create_dir: TRUE

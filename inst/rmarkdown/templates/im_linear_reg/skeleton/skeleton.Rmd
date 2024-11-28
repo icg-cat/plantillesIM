@@ -1,0 +1,290 @@
+---
+title: "plantilla de format html per documents de l'Institut Metròpoli - regressió lineal"
+author: "IERMB"
+date: "`r format(Sys.time(), '%d-%m-%y')`"
+output: 
+  html_document:
+    df_print: paged
+    css: mycerulean.css
+    highlight: tango
+    code_folding: show
+    number_sections: true
+    toc: true
+    toc_float:
+      collapsed: true
+      smooth_scroll: true
+editor_options: 
+  chunk_output_type: console
+---
+
+![](trama2.png)
+
+```{r setup, include=FALSE}
+# Aquest chunk defineix els paràmetres per defecte respecte a com mostrar el codi, però per defecte no es mostra als resultats. 
+knitr::opts_chunk$set(echo = TRUE, message = F, warning = F)
+```
+
+```{r include = FALSE}
+library(showtext)
+library(tidyverse)
+library(sjPlot)
+library(vcd)
+library(questionr)
+library(plotly)
+```
+
+```{r include = FALSE}
+# Aquest chunk carrega la font Atkinson, i tampoc es mostra als resultats
+font_add_google(name   = "Atkinson Hyperlegible", 
+                family = "Atkinson Hyperlegible")
+showtext_auto()
+```
+
+Aquest document presenta una petita plantilla per l'aplicació de models de regressió lineal amb unes dades de joguina. 
+
+En primer lloc es realitza la preparació de l'espai de treball, incloent un tractament mínim de dades, que altrament es recomana realitzar en un script a part. En segon lloc es realitzen un seguit d'anàlisis descriptives bivariades entre la VD i les VI's. En darrer lloc es realitzen un seguit de models i es presenten en taules. Els models no tenen cap sentit substantiu, sinó que s'adapten a les dades de mostra disponibles. 
+
+# Setup de l'espai de treball
+
+Aquí definirem els objectes de treball, que pot incloure dades, funcions a mida, taules amb referències, etc. 
+
+## Dades
+Carrego unes dades de mostra
+```{r}
+data("starwars")
+```
+
+## Prepara les dades
+
+Idealment, en obrir el RMD ja tenim una còpia de les dades a punt, que hem preparat en un altre script previ (veure com a exemple el template de data wrangling). Tot i així, podem necessitar aplicar filtres o definir les categories de referència. 
+
+Afegeixo un pes fictici = 1, perquè la funció permet ponderar:
+```{r}
+starwars$pes <- 1
+```
+
+Recodes: 
+```{r}
+starwars <- starwars %>%  
+  mutate(
+    gender = factor(gender)
+  ) %>% 
+  mutate(
+    hair = forcats::fct_collapse(
+      factor(hair_color), 
+      grey_white = c("auburn, grey", "auburn, white", "brown, grey", "grey", "white"), 
+      brown = c("auburn", "brown"), 
+      black = "black", 
+      blond = c("blond", "blonde"), 
+      none = c("none", "unknown")
+    ), 
+    hair = relevel(factor(hair), ref = "none")
+  )
+```
+
+
+## Funcions
+Defineixo unes funcions per facilitar l'aplicació i visualització dels models:
+
+```{r}
+# aquesta funció realitza una anàlisi bivariada i genera un diagrama 
+descriptiu <- function(VD, VI, pes, dades, titol = ""){
+  # stop()
+  if(class(dades[[VI]]) == "factor"){
+    descriu_fact(VD, VI, pes, dades, titol)
+  } else if(class(dades[[VI]]) %in% c("numeric", "double", "integer")){
+    descriu_num(VD, VI, pes, dades, titol)
+  } else {
+    stop("la variable independent hauria de ser bé factor, bé numèrica")
+  }
+}
+
+descriu_num <- function(VD, VI, pes, dades, titol){
+  correl <- cor(dades[[VD]], 
+              dades[[VI]], 
+              use = "pairwise.complete.obs")
+
+  mx <- max(dades[[VI]], na.rm = T) 
+  my <- max(dades[[VD]], na.rm = T)
+
+ disp <- bind_cols(
+  x = dades[[VI]], 
+  y = dades[[VD]], 
+  pes = pes
+  ) %>% 
+  ggplot(.) + 
+  aes(
+    x = x, 
+    y = y
+  ) + 
+  geom_point(alpha = .7) + 
+  annotate("text", 
+           x = mx-(mx/6), 
+           y = my-(my/6), 
+           label = paste0("CCP: ", round(correl,3))
+           ) +  
+  IMpaletes::theme_IM() +
+  geom_smooth(method = lm,   
+              se = FALSE)     + 
+    labs(
+      title = titol
+    )
+  
+  disp
+}
+
+descriu_fact <- function(VD, VI, pes, dades, titol){
+
+  disp <- bind_cols(
+    x = dades[[VI]], 
+    y = dades[[VD]], 
+    pes = pes
+  ) %>% 
+    ggplot(.) + 
+    aes(
+      x = x, 
+      y = y, 
+      fill = x
+    ) + 
+    geom_boxplot() + 
+    IMpaletes::theme_IM() + 
+    IMpaletes::paleta_IM_quali(aesthetics = "fill", grup = "sext1") + 
+    labs(
+      title = titol
+    )
+  
+  disp
+  
+}
+
+
+```
+
+```{r}
+# aquesta funció calcula els models (ponderant) i genera una taula de resultats i un gràfic. 
+
+mymodel <- function(VD, vi1, vi2, pes, dd, titol = ""){
+  # stop()
+  mm <- lm(dd[[VD]] ~ dd[[vi1]] + dd[[vi2]], # canviar + per * si interacció té sentit 
+            weights = dd[[pes]])
+  
+  plot(mm)
+  
+  sjPlot::tab_model(mm, 
+                    show.p = T,
+                    show.aic = T, 
+                    show.r2 = TRUE
+  )
+}
+```
+
+# Anàlisi descriptiva
+
+Explorem les relacions bivariades entre els predictors i la VD
+
+```{r}
+myIV <- c("hair", "gender", "mass")
+
+res <- lapply(myIV, function(x){
+  # stop()
+  descriptiu(VD = "height", 
+             VI = x, 
+             pes = "pes", 
+             dades = starwars,
+             titol = paste0("Relacio entre alçada i ", x))
+})
+
+
+```
+
+```{r}
+map(.x = res, .f = ggplotly)
+```
+
+Fins on he descobert, ggplotly() no funciona bé amb llistes. Li demano manualment:
+
+```{r}
+ggplotly(res[[1]])
+
+ggplotly(res[[2]])
+
+ggplotly(res[[3]])
+```
+
+# Models {.tabset}
+
+## model 1
+```{r}
+
+mm1 <- lm(height ~ mass, 
+            weights = pes, 
+            data    = starwars)
+
+plot(mm1)
+
+sjPlot::tab_model(mm1, 
+                  show.intercept = T, 
+                  show.p = T,
+                  show.aic = T
+   )
+```
+
+\n
+\n
+Hi ha un cas atípic que deforma tota la distribució. Podem excloure'l? És una babosa gegant. Direm que sí. 
+
+![Jabba](https://media.wired.com/photos/59a0c5bbcd8cd426d548214c/master/pass/jabba-FA.jpg)
+
+```{r}
+
+mm2 <- lm(height ~ mass, 
+            weights = pes, 
+            data    = starwars %>% 
+                          filter(mass < 500)
+          )
+
+plot(mm2)
+
+sjPlot::tab_model(mm2, 
+                  show.intercept = T, 
+                  show.p = T,
+                  show.aic = T
+   )
+```
+
+
+## model conjunt
+```{r}
+mymodel(
+  VD = "height", 
+  vi1 = "mass", 
+  vi2 = "gender", 
+  pes = "pes", 
+  dd = starwars %>% filter(mass < 500)
+  )
+```
+
+## contrastos
+
+### Anova
+
+Es millor el model conjunt que els més simples? H0: la diferència en l'ajust entre models és diferent de 0. 
+
+resposta:  hi ha evidència suficient per dir que el model complet és millor que el simple. 
+
+```{r}
+dd <- starwars %>% 
+  select(height, mass, gender, pes) %>% 
+  filter(mass < 500) %>% 
+  filter(complete.cases(.))
+
+v1 <- lm(height ~ mass, 
+               weights = pes, 
+               data    = dd)
+v2 <- lm(height ~ mass + gender, 
+               weights = pes, 
+               data    = dd)
+anova(v1, v2, 
+      test ="Chisq")
+```
+

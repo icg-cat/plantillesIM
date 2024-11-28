@@ -1,0 +1,307 @@
+---
+title: "plantilla de format html per documents de l'Institut Metròpoli - tractament de dades"
+author: "IERMB"
+date: "`r format(Sys.time(), '%d-%m-%y')`"
+output: 
+  html_document:
+    df_print: paged
+    css: mycerulean.css
+    highlight: tango
+    code_folding: show
+    number_sections: true
+    toc: true
+    toc_float:
+      collapsed: true
+      smooth_scroll: true
+---
+
+![](trama2.png)
+
+```{r setup, include=FALSE}
+# Aquest chunk defineix els paràmetres per defecte respecte a com mostrar el codi, però per defecte no es mostra als resultats. 
+knitr::opts_chunk$set(echo = TRUE, message = F, warning = F)
+```
+
+```{r include = FALSE}
+library(showtext)
+library(tidyverse)
+```
+
+```{r include = FALSE}
+# Aquest chunk carrega la font Atkinson, i tampoc es mostra als resultats
+font_add_google(name   = "Atkinson Hyperlegible", 
+                family = "Atkinson Hyperlegible")
+showtext_auto()
+```
+
+
+# Carregar dades
+
+Guardem la ruta de l'arxiu (al nostre ordinador) en un objecte
+```{r}
+ruta <- "ruta/fins/arxiu.extensio"
+```
+
+que seguidament podem fer servir per llegir les dades en qualsevol format: 
+
+## RDS
+```{r eval=FALSE, include=TRUE}
+dd <- readRDS(ruta)
+```
+
+## csv
+```{r eval=FALSE, include=TRUE}
+dd <- read.csv2(ruta)
+```
+
+## sav
+```{r eval=FALSE, include=TRUE}
+dd <- foreign::read.spss(
+  ruta, to.data.frame = T, use.value.labels = F)
+```
+
+## dbf
+```{r eval=FALSE, include=TRUE}
+dd <- foreign::read.dbf(ruta)
+```
+
+## xlsx
+```{r eval=FALSE, include=TRUE}
+openxlsx::read.xlsx(ruta, sheet = "nom_del_full")
+```
+
+
+Aquesta versió funciona per tots els formats: 
+```{r eval=FALSE, include=TRUE}
+carrega_dades(ruta)
+```
+
+
+El següent codi ens serveix per generar un diccionari de variables a partir de la vista de variables de spss:
+
+```{r eval=FALSE, include=TRUE}
+dades <- foreign::read.spss(ruta, use.value.labels = T)
+dict <- crea_dict(dades)
+```
+
+
+
+
+## problemes comuns per obrir arxius de dades
+
+* la ruta ha d'incloure l'extensió de l'arxiu
+* la ruta pot ser parcial, si treballem des d'un projecte, i sinó haurà de ser des del directori arrel
+* la ruta s'ha d'escriure amb "forward-slash" [/], i no "back-slash" [\] com windows
+* sovint no s'entén bé amb caràcters especials al nom o la ruta de l'arxiu, com a accents o signes de puntuació
+
+
+# Cinc verbs bàsics 
+
+```{r}
+# carreguem unes dades de mostra que porta el paquet:
+data("llars", package = "plantillesIM")
+data("persones", package = "plantillesIM")
+```
+
+En la gramàtica de dplyr, partim de 5 verbs que ens permeten realitzar la immensa majoria d'operacions de preparació i tractament de les dades que necessitarem. 
+A continuació s'il·lustra cada un, i s'exemplifica com fer-los servir amb dades ponderades, quan sigui pertinent. 
+
+## select
+Serveix per triar variables (columnes), per exemple per fer versions del conjunt de dades més reduïdes i fàcils de manipular. 
+
+Cal que informem els noms de les variables a retenir:
+
+```{r}
+dp <- llars %>% 
+  select(IDllar, HY020)
+```
+
+podem fer servir expressions de tidyselect per a facilitar-nos la selecció: 
+
+```{r}
+dp <- llars %>% 
+  select(contains("HH"), contains("HS"))
+```
+
+
+## filter
+serveix per seleccionar casos (files), per exemple per treballar amb una secció de la mostra. 
+
+Cal que informem la condició lògica dels casos a retenir. 
+
+```{r}
+dp <- persones %>% 
+  filter(RB080 > 2000) %>% 
+  select(ID, RB050)
+```
+
+## mutate
+serveix per crear noves variables. 
+
+Podem donar qualsevol altra funció que doni com a resultat el mateix nombre d'unitats (files) de les dades inicials. Podem realitzar tantes operacions de creació de noves variables com vulguem, separant-les amb comes. Podem fer servir les variables creades immmediatament abans, dins de la mateixa instrucció de mutate: 
+
+```{r}
+dificultat <- llars %>% 
+  mutate(
+    llar_10k = ifelse(HY020 < 10000, "per sota", "igual o major"), 
+    dif_10k  = ifelse(llar_10k == "per sota" & HS150 == "Una carga pesada", "Dificultat severa", "altres situacions")
+  )
+```
+
+
+## summarise
+serveix per sintetitzar resultats, per exemple per extreure una mitjana, un recompte, unes mesures de tendència central, etc: 
+
+```{r}
+llars %>% 
+  summarise(
+    mitjana = Hmisc::wtd.mean(HY020, 
+                              weights = HB030, 
+                              na.rm = T), 
+    mediana = Hmisc::wtd.quantile(HY020, 
+                              weights = HB030, 
+                              probs = 0.5,
+                              na.rm = T), 
+    maxim   = max(HY020, na.rm = T), 
+    minim   = min(HY020, na.rm = T)
+  )
+
+```
+
+
+## group_by
+serveix per agrupar les dades en base a un criteri o variable comuna, i realitzar operacions de càlcul de variables (mutate) o de síntesi de resultats (summarise). Com a tal, `group_by()` no retorna cap resultat visible, sinó un dataframe que internament està agrupat. 
+
+L'exemple a continuació encadena tots els verbs:
+
+```{r}
+
+# primer anem a identificar les categories de lloguer a HH021:
+lloguer <- levels(llars$HH021)[3:4]
+print(lloguer)
+
+# comencem amb la base de llars
+llars %>% 
+  # anem a crear unes variables noves
+  mutate(
+    llar_10k = ifelse(HY020 < 10000, "per sota", "igual o major"), 
+    dif_10k  = ifelse(llar_10k == "per sota" & HS150 == "Una carga pesada", "Dificultat severa", "altres situacions")
+  ) %>% 
+  # filtrem només les llars en lloguer
+  filter(HH021 %in% lloguer) %>% 
+  # seleccionem les variables que ens cal (opcional)
+  select(HB030, HH021, HY020) %>% 
+  # agrupem per lloguer (per diferenciar els dos grups)
+  group_by(HH021) %>% 
+  # apliquem els càlculs descriptius
+  summarise(
+    mitjana = Hmisc::wtd.mean(HY020, 
+                              weights = HB030, 
+                              na.rm = T), 
+    mediana = Hmisc::wtd.quantile(HY020, 
+                              weights = HB030, 
+                              probs = 0.5,
+                              na.rm = T), 
+    maxim   = max(HY020, na.rm = T), 
+    minim   = min(HY020, na.rm = T)
+  )
+  
+
+```
+
+
+
+# Importar variables
+
+L'objectiu aquí consisteix en informar una o diverses variables presents en una base (en direm "origen") en una altre conjunt (en direm "destí").
+
+El primer que cal fer és identificar la clau primària (aquella variable que hauria d'estar present als dos conjunts i que permet identificar els casos, per a poder assignar els valors d'origen a destí), idealment, amb el mateix nom. 
+
+A continuació veurem diferents supòsits: 
+
+## mateixes unitats
+A origen i destí hi ha les mateixes unitats (per exemple, individus d'una mostra), i només ens cal "traslladar" les dades del conjunt d'origen seguint l'ordre a la base de destí. 
+
+El mètode més comú per a fer aquest tipus de fusió és amb un `left_join()`, com a l'exemple a continuació: 
+
+```{r eval=FALSE, include=TRUE}
+desti2 <- left_join(desti, origen, by = "clau1") 
+```
+
+Podem mirar la documentació del paquet `dplyr` per veure més tipus de join. 
+
+## unitats diferents
+origen i destí no tenen les mateixes unitats. Aquí diferenciem dues situacions:
+
+### les unitats de destí són elements que formen part de les unitats d'origen
+
+Per exemple, les unitats d'origen són llars i les de destí són persones que composen les llars. Volem informar per cada individu una dada que procedeix de les llars, i que serà igual per tots els seus membres. 
+
+En aquest cas, també podem fer servir left_join. Ens caldrà fer servir la clau primària comú (que serà l'identificador de la llar). Però és important que les dades amb els elements (individus) siguin les que reben les dades dels agregats (llars), per tant, informen l'argument a l'esquerra (x) del left_join. En abstracte, seria una cosa així:  
+
+
+```{r eval=TRUE, include=TRUE}
+fusio <- left_join(persones, llars, by = "IDllar")
+```
+
+
+### la unitat de destí és una suma de les unitats d'origen
+
+Per exemple, origen són persones i destí són llars. Volem informar per cada llar una mesura que resumeix els valors dels individus que les composen. 
+
+En aquest cas, primer cal determinar l'operació d'agregació que es vol aplicar (p.e., la mitjana, el màxim, la suma...), i traslladar la variable després d'haver-la calculat. El segon pas el podem fer de la mateixa manera que en les passes anteriors. El primer pas requereix una operació per grups, com acabem de veure amb `group_by()`. 
+
+
+# Reshaping
+
+*reshaping* o *pivoting* fa referència a transformar les dades entre format *long* i *wide*. És el que en excel s'anomena `transposar`. En el format **wide** cada variable ocupa l'espai d'una columna. És el format més habitual, al que estem més acostumades. En el format **long** una columna conté el nom de la variable i una altra els valors. Aquest format és molt pràctic per sintetitzar dades, per realitzar determinades operacions i per la seva representació gràfica. 
+
+Les funcions clau per a realitzar aquestes tasques de transformació entre un i altre format són `pivot_longer()` i `pivot_wider()`. 
+
+La següent figura il·lustra aquesta lògica: 
+
+![]("pivot_longer.png")
+[Font](https://juvenalcampos.com/2020/12/04/pivoteando-bases/#:~:text=Pivoteando%20bases%3A%20breve%20tutorial%20de%20pivot_longer%20y%20pivot_wider,6%20Ejemplo%20pr%C3%A1ctico%20con%20datos%20de%20COVID.%20)
+
+La millor referència on aprendre a fer servir aquestes funcions és [aquesta vinyeta](https://tidyr.tidyverse.org/articles/pivot.html). A continuació posem només un exemple d'aplicació, sense entrar massa en detalls: 
+
+### de wide a long:
+
+```{r}
+data(starwars)
+head(starwars)
+```
+
+```{r}
+starwars %>% 
+  select(name, contains("color")) %>% 
+  pivot_longer(cols = contains("color"), 
+               names_to = "Color", 
+               values_to = "Vals")
+```
+
+### de long a wide
+
+Primer genero un dataset long desplegant el list-column que conté les pel·lícules en que apareix cada personatge. 
+```{r}
+swLong <- map2(.x = starwars$name, 
+     .y = starwars$films, 
+     .f = function(.x, .y){
+          bind_cols(nom   = rep(.x, length(.y)), 
+                    pelis = .y) 
+     }) %>% 
+  do.call("bind_rows", .) 
+
+head(swLong)  
+
+```
+Ara crearem un dataframe on cada peli sigui una columna, i s'informi si el personatge hi apareix o no 
+
+```{r}
+swLong %>% 
+  pivot_wider(names_from = pelis, 
+              values_from = pelis,
+              values_fn =  ~!is.na(.x)) %>% 
+  mutate(across(everything(~ifelse(is.na(.x), FALSE, .x))))
+```
+

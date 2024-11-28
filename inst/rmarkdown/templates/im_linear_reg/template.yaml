@@ -1,0 +1,4 @@
+name: IM_linear_reg
+description: >
+   Plantilla de script per realitzar regressions lineals, i funcións accessòries de visualització de models i representació gràfica. L'script inclou el format de l'institut per documents html, amb tipografia Atkinson i paleta de colors corporatius.
+create_dir: TRUE

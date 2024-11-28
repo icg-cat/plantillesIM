@@ -1,0 +1,293 @@
+---
+title: "plantilla per realitzar diagrames de venn"
+author: "IERMB"
+date: "`r format(Sys.time(), '%d-%m-%y')`"
+output: 
+  html_document:
+    df_print: paged
+    css: mycerulean.css
+    highlight: tango
+    code_folding: show
+    number_sections: true
+    toc: true
+    toc_float:
+      collapsed: true
+      smooth_scroll: true
+editor_options: 
+  chunk_output_type: console
+---
+
+![](trama.png)
+
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = F, warning = F)
+knitr::knit_hooks$set(optipng = knitr::hook_optipng)
+```
+
+```{r include = FALSE}
+library(showtext)
+library(tidyverse)
+library(eulerr)
+library(glue)
+library(stringr)
+```
+
+```{r include = FALSE}
+# Aquest chunk carrega la font Atkinson, i no es mostra als resultats
+font_add_google(name   = "Atkinson Hyperlegible", 
+                family = "Atkinson Hyperlegible")
+showtext_auto()
+```
+
+Un diagrama de venn és un tipus de gràfic que permet visualitzar la mida relativa de grups que poden interseccionar. L'exemple típic és la taxa de risc de pobresa i exclusió social, que es composa de la gent que pateix bé risc de pobresa, bé privació material, bé baixa intensitat de treball a la llar (o qualsevol combinació de les tres). 
+
+Aquest document explica com realitzar un diagrama de Venn amb el paquet eulerr. Existeixen diferents paquets que permeten fer aquest tipus de gràfic, però el d'eulerr s'ha valorat com el més intuitiu dins dels que permeten donar mides diferents als grups representats. 
+
+Per construir un diagrama de venn seguirem les següents passes: 
+
+* 1. calcular les freqüències relatives de cada grup i intersecció
+* 2. assignar les freqüències a cada combinació
+* 3. generar el gràfic
+* 4. personalitzar els paràmetres estètics
+
+# calcular les freqüències
+
+Per calcular les freqüències necessitarem fer una taula que agrupi per les 3 o més variables de referència (en el nostre cas, risc de pobresa, privació i lowjob) i que ens doni les freqüències relatives per cada combinació, com en l'exemple a continuació: 
+
+```{r}
+
+tbl <- tibble::tribble(
+ ~rownum, ~lowjob,  ~SMD,        ~pobresa,    ~n,            ~prop,
+  "1",     "No",     "No SMSD",   "Pobre",     "434230.32",   "13.2",
+  "2",     "No",     "Si SMSD",   "No pobre",  "129727.43",   "4.0",
+  "3",     "No",     "Si SMSD",   "Pobre",     "149355.72",   "4.6",
+  "4",     "Si",     "No SMSD",   "No pobre",  "54304.94",    "1.7",
+  "5",     "Si",     "No SMSD",   "Pobre",     "75585.98",    "2.3",
+  "6",     "Si",     "Si SMSD",   "No pobre",  "13343.17",    "0.4",
+  "7",     "Si",     "Si SMSD",   "Pobre",     "36723.75",    "1.1"
+  )
+
+tbl
+
+```
+
+Aquest document no inclou el procediment de càlcul per motius d'espai, però ho podrem aconseguir fàcilment fent servir la funció `dplyr::group_by()`. 
+
+
+# assignar les freqüències
+
+Un cop tenim les freqüències, les assignem a totes les combinacions possibles entre els diferents grups. Per exemple, suposem que, per fer curt, li diem "A" al risc de pobresa, "B" a la privació material i social, i "C" a la baixa intensitat de treball a la llar (lowjob). Li donarem a "A" el valor de la proporció de gent que pateix risc de pobresa, però no pateix privació material i social ni baixa intensitat s'ocupació a la llar. En canvi, li direm "AB" a la proporció de gent que pateix risc de pobresa i privació però no lowjob, etc. 
+```{r}
+A <-  as.numeric(tbl[1,6])
+B <-  as.numeric(tbl[2,6])
+C <-  as.numeric(tbl[4,6])
+AB <- as.numeric(tbl[3,6])
+BC <- as.numeric(tbl[6,6])
+AC <- as.numeric(tbl[5,6])
+ABC <-as.numeric(tbl[7,6])
+```
+
+A continuació crearem un vector amb les dades de les proporcions, de manera que es desi com un objecte venn: 
+
+```{r}
+vnbb <- euler(
+  c('A'    = A,
+    'A&B'  = AB,
+    'A&C'  = AC,
+    'A&B&C'= ABC,
+    'B'    = B,
+    'C&B'  = BC,
+    'C'    = C)
+)
+```
+
+
+# generar gràfic
+
+Ara passem a generar el gràfic amb els elements que hem definit. La versió més imple possible del gràfic, amb tots els paràmetres per defecte, l'aconseguim simplement demanant plot sobre l'objecte creat anteriorment: 
+
+```{r}
+myvenn <- plot(vnbb)
+
+myvenn
+```
+
+Com aquest gràfic és molt millorable, anem a prendre diferents passes per personalitzar-lo en el següent apartat. 
+
+# personalitzar {.tabset}
+
+## colors
+
+L'argument `fills` permet canviar els colors, l'argument `alpha` permet controlar la opacitat:
+
+```{r}
+plot(vnbb,
+     fills = IMpaletes::grups$codi[IMpaletes::grups$VAL == "trio2"],  # Paleta colors IM
+     alpha = 0.8)
+```
+
+## etiquetar
+
+En primer lloc, definierem la font que volem fer servir:  
+
+```{r}
+windowsFonts(myfont = windowsFont("Atkinson Hyperlegible"))
+```
+
+L'argument `quantities` ens permetrà indicar que volem veure les xifres dins de cada segment, i li especifiquem la font. `cex`ens permet controlar la mida d'aquestes xifres. 
+
+```{r}
+plot(vnbb,
+     fills = IMpaletes::grups$codi[IMpaletes::grups$VAL == "trio2"],  # Paleta colors IM
+     alpha = 0.8, 
+     quantities = list(
+       cex = 2, 
+       fontfamily = "myfont"
+     ))
+```
+
+`labels`ens permet etiquetar els grups amb els seus noms: 
+
+```{r}
+plot(vnbb,
+     fills = IMpaletes::grups$codi[IMpaletes::grups$VAL == "trio2"],  # Paleta colors IM
+     alpha = 0.8, 
+     labels = list(
+       labels = c("Pobresa",
+                  "Privació material\ni social severa",
+                  "Baixa intensitat\nen el treball"),
+                cex  = 2,
+                font = 1,
+                fontfamily = "myfont")
+     )
+
+```
+
+
+Alternativament, podem posar una llegenda que resumeixi els noms, en lloc de posar tot el text sobre els segments del gràfic. 
+
+L'argument `font` dins de legend determina si fem servir text normal (1), en negreta (2), en cursiva (3), o en negreta cursiva (4). 
+
+```{r}
+plot(vnbb,
+     fills = IMpaletes::grups$codi[IMpaletes::grups$VAL == "trio2"],  # Paleta colors IM
+     alpha = 0.8, 
+     quantities = list(
+       cex = 2, 
+       fontfamily = "myfont"), 
+     legend = list(
+       cex = 1.3,
+       font = 3,
+       labels = c("Risc de pobresa",
+                  "Privació material i social severa",
+                  "Molt baixa intensitat de treball \na la llar"),
+                   fontfamily = "myfont") # caldrà que especifiquem la font per cada element
+     )
+```
+
+Podem fer servir la funció `glue()` per a generar unes etiquetes que a més integrin els totals de cada un dels grans grups a la llegenda, ja que els valors totals queden descomposats entre els segments: 
+
+```{r}
+etiquetes <- c(
+  glue("Risc de pobresa ({A + AB + AC + ABC}%)"),
+  glue("Privació material i social \nsevera ({B + BC + AB + ABC}%)"),
+  glue("Molt baixa intensitat de \ntreball a la llar ({C + AC + BC + ABC}%)")
+)
+
+# afegim un pas per a canviar els punts per comes com a separadors decimals: 
+
+etiquetes <- str_replace_all(string = etiquetes, pattern = "\\.", replacement = ",")
+
+plot(vnbb,
+     fills = IMpaletes::grups$codi[IMpaletes::grups$VAL == "trio2"],  # Paleta colors IM
+     alpha = 0.8, 
+     quantities = list(
+       cex = 2, 
+       fontfamily = "myfont"), 
+     legend = list(
+       cex = 1.3, 
+       font = 3,
+       labels = etiquetes,
+       fontfamily = "myfont") # caldrà que especifiquem la font per cada element
+     )
+
+```
+
+Per últim afegim un títol. I aquest cop guardo el gràfic dins un objecte.  
+```{r}
+myplot <- plot(vnbb,
+               fills = IMpaletes::grups$codi[IMpaletes::grups$VAL == "trio2"], # Paleta colors IM
+               alpha = 0.8, 
+               quantities = list(
+                 cex = 2, 
+                 fontfamily = "myfont"), 
+               legend = list(
+                 cex = 2, 
+                 font = 3,
+                 labels = etiquetes,
+                 fontfamily = "myfont"), # caldrà que especifiquem la font per cada element
+               main = list(
+                 cex = 3, 
+                 label = paste("Interseccions AROPE 2021-2022 (Nova Metodologia)"),
+                 fontfamily = "myfont" )
+               )
+
+myplot
+```
+
+
+## modificar format xifres
+Ara ens faltaria modificar els números dins dels segments, de manera que també estiguin separats per comes, i incloguin un 0 entre els decimals, que de manera molt molesta ens ha tret per arrodonir. 
+
+Per a fer això ens caldrà tocar alguns elements una mica més obscurs del codi de gràfics de base. D'entrada, anem a veure com es diuen els diferents elements que composen el gràfic. Primer haurem de crear un objecte amb la darrera versió del gràfic que volem modificar: 
+
+```{r}
+names(myplot)
+
+grid::grid.ls(myplot)
+```
+
+El que necessitem modificar són els "canvas.grob", que es troben dins de l'element anomenat "children". 
+
+```{r}
+# guardem l'objecte "tags", que contè les etiquetes
+tags <- myplot$children[["canvas.grob"]]$children[[1]]$children$tags$children
+
+```
+
+Ara modificarem les etiquetes en sèrie: 
+
+```{r}
+# sobre-escriu tags
+tags <- 
+  # replica la següent operació
+  do.call(
+          grid::gList,
+          # per cada element dins de tags, diguem-ne "x" 
+          lapply(tags, function(x) {
+            # sobre-escriu l'etiqueta del segon element a children (tag.quantity.n)
+            # reemplaça punt per coma, i si no hi ha decimal, afegeix-lo
+            x$children[[2]]$label <- ifelse(
+                                        grepl("\\.", x$children[[2]]$label),
+                                        sub("\\.", ",", x$children[[2]]$label),
+                                        paste0(x$children[[2]]$label, ",0"))
+            return(x)})
+          )
+
+```
+
+Ara podem substituir les etiquetes que hi havia prèviament amb les noves: 
+
+```{r}
+myplot$children[["canvas.grob"]]$children[[1]]$children$tags$children <- tags
+
+```
+
+I obtenim el plot final: 
+
+```{r optipng = ""}
+# això fa un gràfic amb atkinson, pel que el canvi es produeix posteriorment
+# ggplot2::ggsave(filename = "myvenn.png", plot = myplot)
+myplot
+```

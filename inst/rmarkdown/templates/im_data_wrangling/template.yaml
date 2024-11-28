@@ -1,0 +1,4 @@
+name: IM_data_wrangling
+description: >
+   Plantilla de script per tractament de dades, amb operacions bàsiques de filtratge, transformació de variables, join entre datasets i reshaping. L'script inclou el format de l'institut per documents html, amb tipografia Atkinson i paleta de colors corporatius.
+create_dir: TRUE
