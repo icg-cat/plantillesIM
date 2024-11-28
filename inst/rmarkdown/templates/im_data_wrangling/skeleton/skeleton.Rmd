@@ -155,32 +155,39 @@ serveix per sintetitzar resultats, per exemple per extreure una mitjana, un reco
 ```{r}
 llars %>% 
   summarise(
+    # calculem una mitjana ponderada
     mitjana = Hmisc::wtd.mean(HY020, 
                               weights = HB030, 
                               na.rm = T), 
+    # calculem la mediana ponderada
     mediana = Hmisc::wtd.quantile(HY020, 
                               weights = HB030, 
                               probs = 0.5,
-                              na.rm = T), 
-    maxim   = max(HY020, na.rm = T), 
-    minim   = min(HY020, na.rm = T)
+                              na.rm = T),
+    # calculem el mínim
+    minim   = min(HY020, na.rm = T),
+    # calculem el màxim
+    maxim   = max(HY020, na.rm = T) 
   )
 
 ```
 
 
 ## group_by
-serveix per agrupar les dades en base a un criteri o variable comuna, i realitzar operacions de càlcul de variables (mutate) o de síntesi de resultats (summarise). Com a tal, `group_by()` no retorna cap resultat visible, sinó un dataframe que internament està agrupat. 
+serveix per agrupar les dades en base a un criteri o variable comuna, i realitzar operacions de càlcul de variables (mutate) o de síntesi de resultats (summarise). A efectes pràctics, agrupar és com afegir una variable independent. Per exemple, si volem fer una taula de freqüències de la variable que identifica si una llar es troba en risc de pobresa, segons el règim de tinença, aquest actua com a variable independent, i calcularem les proporcions *dins de* els grups que ens genera. Com a tal, `group_by()` no retorna cap resultat visible, sinó un dataframe que internament està agrupat, i sobre el qual aplicarem altres operacions. 
 
 L'exemple a continuació encadena tots els verbs:
 
 ```{r}
 
 # primer anem a identificar les categories de lloguer a HH021:
+levels(llars$HH021)
+# i les guardem dins d'un objecte, lloguer
 lloguer <- levels(llars$HH021)[3:4]
 print(lloguer)
 
-# comencem amb la base de llars
+# comencem el tractament amb la base de llars:
+
 llars %>% 
   # anem a crear unes variables noves
   mutate(
@@ -190,8 +197,8 @@ llars %>%
   # filtrem només les llars en lloguer
   filter(HH021 %in% lloguer) %>% 
   # seleccionem les variables que ens cal (opcional)
-  select(HB030, HH021, HY020) %>% 
-  # agrupem per lloguer (per diferenciar els dos grups)
+  select(HB030, HH021, HY020) %>%
+  # agrupem per lloguer (per diferenciar els dos grups de lloguer)
   group_by(HH021) %>% 
   # apliquem els càlculs descriptius
   summarise(
@@ -209,6 +216,20 @@ llars %>%
 
 ```
 
+Per fer una taula de freqüències (ponderant), podem fer servir la funció `fes_taula()`, que aplica, i simplifica aquest procés: 
+
+```{r}
+llars %>% 
+  # anem a crear unes variables noves
+  mutate(
+    llar_10k = ifelse(HY020 < 10000, "per sota", "igual o major")
+  ) %>% 
+  dplyr::select(llar_10k, HH021, HB030) %>% 
+  # filtrem només les llars en lloguer
+  filter(HH021 %in% lloguer) %>%
+  # fes una taula de freqüències
+  fes_taula(VI = "HH021", VD = "llar_10k", pes = "HB030")
+```
 
 
 # Importar variables
