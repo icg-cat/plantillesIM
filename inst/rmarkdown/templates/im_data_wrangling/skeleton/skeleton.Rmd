@@ -216,7 +216,7 @@ llars %>%
 
 ```
 
-Per fer una taula de freqüències (ponderant), podem fer servir la funció `fes_taula()`, que aplica, i simplifica aquest procés: 
+Perquè el resultat dels 5 verbs segueix sent un objecte de classe `data.frame`, també ho podem encadenar amb altres funcions que prenguin com a (primer) argument un conjunt de dades. Per exemple, per fer una taula de freqüències (ponderant), podem fer servir la funció `fes_taula()`, que aplica els 5 verbs, però ens simplifica el procés: 
 
 ```{r}
 llars %>% 
@@ -228,7 +228,7 @@ llars %>%
   # filtrem només les llars en lloguer
   filter(HH021 %in% lloguer) %>%
   # fes una taula de freqüències
-  fes_taula(VI = "HH021", VD = "llar_10k", pes = "HB030")
+  plantillesIM::fes_taula(VI = "HH021", VD = "llar_10k", pes = "HB030")
 ```
 
 
