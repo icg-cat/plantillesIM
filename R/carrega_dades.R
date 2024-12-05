@@ -6,7 +6,7 @@
 #' @param full argument per arxius amb extensió xlsx, pot ser una xifra entera (posició del full), o una cadena de text que identifiqui el nom. Per defecte, 1.
 #'
 #' @return data.frame
-#'
+#' @export
 #' @examples
 #' \dontrun{
 #' ruta <- "C:/user/downloads/mydata.rds"

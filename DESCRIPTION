@@ -5,7 +5,7 @@ Version: 0.1.0
 Author: Irene Cruz Gómez & Iman El Kabiri Ouarqui 
 Maintainer: <irene.cruz@uab.cat>
 Description: Aquest paquet conté un seguit de funcions i plantilles de RMarkdown que simplifiquen les tasques més habituals de tractament i anàlisi de dades. Totes les plantilles segueixen l'aplicació de la imatge corporativa de l'Institut Metròpoli. 
-License: MIT + file LICENSE
+License: GPL (>= 3)
 Encoding: UTF-8
 LazyData: true
 Depends: 

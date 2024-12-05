@@ -4,6 +4,7 @@
 #'
 #' @return data.frame
 #'
+#' @export
 #' @examples
 #' \dontrun{
 #' ruta <- "C:/user/mydata.sav"
