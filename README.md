@@ -8,6 +8,7 @@ Cruz-Gómez, Irene & El Kabiri Ouarqui, Iman (2024). plantillesIM. Plantilles en
 Aquest paquet està en construcció, i és accessible enguany només amb finalitats educatives.
 
 Pel moment, hi trobareu tres plantilles de markdown auto-explicatives, a les que podreu accedir mitjançant el menú de plantilles (templates) per crear un nou markdown:
+![Uploading acces_plantilla.png…]()
 
 * data_wrangling: per fer les tasques més habituals de lectura, tractament i anàlisi descriptiva de dades
 * linear_reg: per realitzar models de regressió lineal
