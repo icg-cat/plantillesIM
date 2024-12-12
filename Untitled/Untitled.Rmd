@@ -36,11 +36,8 @@ showtext_auto()
 
 
 # Carregar dades
-Per carregar un conjunt de dades necessitem 2 coses: 
-* la ruta (com a cadena de text) fins l'arxiu que conté les dades
-* la funció que és capaç d'interpretar el format particular de les dades. 
 
-En primer lloc, anem a guardar la ruta de l'arxiu (al nostre ordinador) en un objecte: 
+Guardem la ruta de l'arxiu (al nostre ordinador) en un objecte
 ```{r}
 ruta <- "ruta/fins/arxiu.extensio"
 ```
@@ -86,8 +83,6 @@ El següent codi ens serveix per generar un diccionari de variables a partir de 
 dades <- foreign::read.spss(ruta, use.value.labels = T)
 dict <- crea_dict(dades)
 ```
-
-
 
 
 ## problemes comuns per obrir arxius de dades

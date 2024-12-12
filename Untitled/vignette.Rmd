@@ -36,11 +36,8 @@ showtext_auto()
 
 
 # Carregar dades
-Per carregar un conjunt de dades necessitem 2 coses: 
-* la ruta (com a cadena de text) fins l'arxiu que conté les dades
-* la funció que és capaç d'interpretar el format particular de les dades. 
 
-En primer lloc, anem a guardar la ruta de l'arxiu (al nostre ordinador) en un objecte: 
+Guardem la ruta de l'arxiu (al nostre ordinador) en un objecte
 ```{r}
 ruta <- "ruta/fins/arxiu.extensio"
 ```
@@ -48,41 +45,41 @@ ruta <- "ruta/fins/arxiu.extensio"
 que seguidament podem fer servir per llegir les dades en qualsevol format: 
 
 ## RDS
-```{r}
+```{r eval=FALSE, include=TRUE}
 dd <- readRDS(ruta)
 ```
 
 ## csv
-```{r }
+```{r eval=FALSE, include=TRUE}
 dd <- read.csv2(ruta)
 ```
 
 ## sav
-```{r }
+```{r eval=FALSE, include=TRUE}
 dd <- foreign::read.spss(
   ruta, to.data.frame = T, use.value.labels = F)
 ```
 
 ## dbf
-```{r }
+```{r eval=FALSE, include=TRUE}
 dd <- foreign::read.dbf(ruta)
 ```
 
 ## xlsx
-```{r }
+```{r eval=FALSE, include=TRUE}
 openxlsx::read.xlsx(ruta, sheet = "nom_del_full")
 ```
 
 
 Aquesta versió funciona per tots els formats: 
-```{r }
+```{r eval=FALSE, include=TRUE}
 carrega_dades(ruta)
 ```
 
 
 El següent codi ens serveix per generar un diccionari de variables a partir de la vista de variables de spss:
 
-```{r }
+```{r eval=FALSE, include=TRUE}
 dades <- foreign::read.spss(ruta, use.value.labels = T)
 dict <- crea_dict(dades)
 ```
@@ -248,7 +245,7 @@ A origen i destí hi ha les mateixes unitats (per exemple, individus d'una mostr
 
 El mètode més comú per a fer aquest tipus de fusió és amb un `left_join()`, com a l'exemple a continuació: 
 
-```{r }
+```{r eval=FALSE, include=TRUE}
 desti2 <- left_join(desti, origen, by = "clau1") 
 ```
 

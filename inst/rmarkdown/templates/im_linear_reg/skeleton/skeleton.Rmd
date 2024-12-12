@@ -31,6 +31,7 @@ library(sjPlot)
 library(vcd)
 library(questionr)
 library(plotly)
+library(IMpaletes2)
 ```
 
 ```{r include = FALSE}
@@ -42,15 +43,17 @@ showtext_auto()
 
 Aquest document presenta una petita plantilla per l'aplicació de models de regressió lineal amb unes dades de joguina. 
 
-En primer lloc es realitza la preparació de l'espai de treball, incloent un tractament mínim de dades, que altrament es recomana realitzar en un script a part. En segon lloc es realitzen un seguit d'anàlisis descriptives bivariades entre la VD i les VI's. En darrer lloc es realitzen un seguit de models i es presenten en taules. Els models no tenen cap sentit substantiu, sinó que s'adapten a les dades de mostra disponibles. 
+El document estructura el procediment en els següents apartats: En primer lloc es realitza la preparació de l'espai de treball, incloent un tractament mínim de dades, que com a criteri general, es recomana realitzar en un script a part. En segon lloc es realitzen un seguit d'anàlisis descriptives bivariades entre la VD i les VI's. En darrer lloc, es realitzen un seguit de models i es presenten en taules. Els models no tenen cap sentit substantiu, sinó que s'adapten a les dades de mostra disponibles. 
 
 # Setup de l'espai de treball
 
 Aquí definirem els objectes de treball, que pot incloure dades, funcions a mida, taules amb referències, etc. 
 
 ## Dades
-Carrego unes dades de mostra
+
+Carreguem unes dades de mostra
 ```{r}
+# aquestes dades es troben al paquet dplyr:
 data("starwars")
 ```
 
@@ -59,11 +62,13 @@ data("starwars")
 Idealment, en obrir el RMD ja tenim una còpia de les dades a punt, que hem preparat en un altre script previ (veure com a exemple el template de data wrangling). Tot i així, podem necessitar aplicar filtres o definir les categories de referència. 
 
 Afegeixo un pes fictici = 1, perquè la funció permet ponderar:
+
 ```{r}
 starwars$pes <- 1
 ```
 
 Recodes: 
+
 ```{r}
 starwars <- starwars %>%  
   mutate(
@@ -84,7 +89,8 @@ starwars <- starwars %>%
 
 
 ## Funcions
-Defineixo unes funcions per facilitar l'aplicació i visualització dels models:
+
+Definim unes funcions per facilitar l'aplicació i visualització dels models:
 
 ```{r}
 # aquesta funció realitza una anàlisi bivariada i genera un diagrama 
@@ -123,7 +129,7 @@ descriu_num <- function(VD, VI, pes, dades, titol){
            y = my-(my/6), 
            label = paste0("CCP: ", round(correl,3))
            ) +  
-  IMpaletes::theme_IM() +
+  IMpaletes2::theme_IM() +
   geom_smooth(method = lm,   
               se = FALSE)     + 
     labs(
@@ -147,8 +153,8 @@ descriu_fact <- function(VD, VI, pes, dades, titol){
       fill = x
     ) + 
     geom_boxplot() + 
-    IMpaletes::theme_IM() + 
-    IMpaletes::paleta_IM_quali(aesthetics = "fill", grup = "sext1") + 
+    IMpaletes2::theme_IM() + 
+    IMpaletes2::paleta_IM_quali(aesthetics = "fill", grup = "sext1") + 
     labs(
       title = titol
     )
@@ -161,11 +167,11 @@ descriu_fact <- function(VD, VI, pes, dades, titol){
 ```
 
 ```{r}
-# aquesta funció calcula els models (ponderant) i genera una taula de resultats i un gràfic. 
+# aquesta funció calcula els models (ponderant) i genera una taula de resultats i uns gràfics d'avaluació. 
 
 mymodel <- function(VD, vi1, vi2, pes, dd, titol = ""){
   # stop()
-  mm <- lm(dd[[VD]] ~ dd[[vi1]] + dd[[vi2]], # canviar + per * si interacció té sentit 
+  mm <- lm(dd[[VD]] ~ dd[[vi1]] + dd[[vi2]], 
             weights = dd[[pes]])
   
   plot(mm)
@@ -197,19 +203,15 @@ res <- lapply(myIV, function(x){
 
 ```
 
-```{r}
-map(.x = res, .f = ggplotly)
+```{r message= F, warning = F}
+# map(.x = res, .f = ggplotly)
+
+for(p in res){
+  plot.new()
+  print(p)
+}
 ```
 
-Fins on he descobert, ggplotly() no funciona bé amb llistes. Li demano manualment:
-
-```{r}
-ggplotly(res[[1]])
-
-ggplotly(res[[2]])
-
-ggplotly(res[[3]])
-```
 
 # Models {.tabset}
 
@@ -222,11 +224,12 @@ mm1 <- lm(height ~ mass,
 
 plot(mm1)
 
+
 sjPlot::tab_model(mm1, 
                   show.intercept = T, 
                   show.p = T,
-                  show.aic = T
-   )
+                  show.aic = T )
+
 ```
 
 \n
@@ -250,6 +253,7 @@ sjPlot::tab_model(mm2,
                   show.p = T,
                   show.aic = T
    )
+
 ```
 
 
